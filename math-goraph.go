@@ -11,6 +11,7 @@ import (
 
 const (
 	INIT_CURS_X = 5
+	YEQ_LINE    = "y ="
 )
 
 func drawLine(x, y int, str string) {
@@ -57,14 +58,14 @@ func initFill(maxX, cursY int) {
 
 	fill(0, 0, maxX, maxY, termbox.Cell{Ch: ' '})
 	fill(0, midY, maxX, 1, termbox.Cell{Ch: '-'})
-	fill(midX, 0, 1, maxY, termbox.Cell{Ch: '|'})
-	drawLine(midX+1, midY+1, "O")
+	fill(midX, 0, 2, maxY, termbox.Cell{Ch: '|'})
+	drawLine(midX+2, midY+1, "O")
 
 	var YpunCounter int
 	for i := 1; i <= Ypunc; i++ {
 		YpunCounter += 5
-		drawLine(midX+1, midY-YpunCounter, fmt.Sprint(YpunCounter))
-		drawLine(midX+1, midY+YpunCounter, fmt.Sprintf("-%v", YpunCounter))
+		drawLine(midX+2, midY-YpunCounter, fmt.Sprint(YpunCounter))
+		drawLine(midX+2, midY+YpunCounter, fmt.Sprintf("-%v", YpunCounter))
 	}
 	var XpunCounter int
 	for i := 1; i <= Xpunc; i++ {
@@ -97,7 +98,7 @@ func drawCubicLoop(maxX, cursY int, kill chan struct{}) {
 	} else {
 		firstX = (maxX / 2) - maxY
 	}
-	if (maxX / 2) == 1 {
+	if (maxX % 2) == 0 {
 		firstX++
 	}
 
@@ -122,7 +123,7 @@ func drawCubicLoop(maxX, cursY int, kill chan struct{}) {
 	}
 }
 
-func drawCoodinate(maxX, maxY int) {
+func drawCoodinate(maxX, maxY, cursX int) {
 	cursY := maxY - 2
 	var cmdLine string
 	coordinate := fmt.Sprintf("maxX: %v maxY: %v ", (maxX / 2), maxY)
@@ -132,7 +133,9 @@ func drawCoodinate(maxX, maxY int) {
 	cmdLine = cmdLine + coordinate
 	fill(maxX-len(coordinate), cursY, len(coordinate), 1, termbox.Cell{Ch: ' '})
 	drawLineFull(0, cursY, cmdLine, termbox.ColorDefault, termbox.ColorRed)
-	drawLineFull(1, cursY, "y = ", termbox.ColorYellow, termbox.ColorRed)
+	drawLineFull(1, cursY, YEQ_LINE, termbox.ColorYellow, termbox.ColorRed)
+	drawLineFull(1, cursY, YEQ_LINE, termbox.ColorYellow, termbox.ColorRed)
+	termbox.SetCursor(cursX+1, cursY)
 	termbox.Flush()
 }
 
@@ -161,6 +164,13 @@ func main() {
 		"t": "[mode: trigonometric]",
 	}
 
+	opeMap := map[string]string{
+		"c": "x",
+		"e": "th power of x",
+		"l": " base's logX",
+		"t": "of sin?",
+	}
+
 	text := make([]string, 0, 30)
 	maxX, maxY := termbox.Size()
 
@@ -169,17 +179,17 @@ func main() {
 	kill := make(chan struct{}, 0)
 
 	cursX := INIT_CURS_X
+	mode := modeMap["MODE_CUBIC"]
+	ope := opeMap[mode]
 	cursY := maxY - 2
 	termbox.SetCursor(cursX+1, cursY)
 
-	drawCoodinate(maxX, maxY)
+	drawCoodinate(maxX, maxY, cursX)
 	initFill(maxX, maxY)
-	drawLineFull(0, cursY-1, "bench", termbox.ColorGreen, termbox.Attribute(100+1))
+	drawLineFull(cursX+2, cursY, ope, termbox.ColorDefault, termbox.ColorRed)
+	drawLineFull(1, cursY-1, "[mode: cubic]", termbox.Attribute(21+1), termbox.ColorDefault)
 	termbox.Flush()
 
-	mode := modeMap["MODE_CUBIC"]
-	drawLineFull(1, cursY-1, "[mode: cubic]", termbox.Attribute(21+1), termbox.ColorDefault)
-	//go drawMathLoop(maxX, cursY, kill)
 	go selectMode(mode, maxX, cursY, kill)
 
 	var tabCount int
@@ -187,11 +197,9 @@ func main() {
 		switch ev := termbox.PollEvent(); ev.Type {
 		case termbox.EventResize:
 			maxX, maxY = termbox.Size()
-			drawCoodinate(maxX, maxY)
 			initFill(maxX, maxY)
 			cursX = INIT_CURS_X
-			cursY = maxY - 2
-			termbox.SetCursor(cursX+1, cursY)
+			drawCoodinate(maxX, maxY, cursX)
 			kill <- struct{}{}
 			go selectMode(mode, maxX, cursY, kill)
 			termbox.Flush()
@@ -199,21 +207,11 @@ func main() {
 			switch ev.Key {
 			case termbox.KeyEsc, termbox.KeyCtrlC:
 				return
-			case termbox.KeyBackspace:
-				if cursX > INIT_CURS_X {
-					cursX--
-					termbox.SetCursor(cursX+1, cursY)
-					drawLineFull(cursX+1, cursY, " ", termbox.ColorDefault, termbox.ColorRed)
-
-					text = text[:len(text)-1]
-					termbox.Flush()
-				}
 			case termbox.KeyEnter:
 				kill <- struct{}{}
 				x := INIT_CURS_X
 				huff = ""
 				fill(x, cursY, maxX-x, 2, termbox.Cell{Ch: ' '})
-				drawCoodinate(maxX, maxY)
 				for _, s := range text {
 					drawLineFull(x+1, cursY+1, s, termbox.ColorRed, termbox.ColorDefault)
 					huff = huff + s
@@ -221,9 +219,10 @@ func main() {
 				}
 				text = make([]string, 0, 30)
 				cursX = INIT_CURS_X
-				termbox.SetCursor(cursX+1, cursY)
+				drawCoodinate(maxX, maxY, cursX)
 				initFill(maxX, maxY)
-				drawLineFull(1, cursY+1, "y = ", termbox.ColorYellow, termbox.ColorDefault)
+				drawLineFull(1, cursY+1, YEQ_LINE, termbox.ColorYellow, termbox.ColorDefault)
+				drawLineFull(cursX+2, cursY, ope, termbox.ColorDefault, termbox.ColorRed)
 				termbox.Flush()
 				go selectMode(mode, maxX, cursY, kill)
 			case termbox.KeyTab:
@@ -242,11 +241,23 @@ func main() {
 				}
 				drawLineFull(1, cursY-1, modeView[mode], termbox.Attribute(21+1), termbox.ColorDefault)
 				termbox.Flush()
+			case termbox.KeyBackspace:
+				if cursX > INIT_CURS_X {
+					drawLineFull(cursX+2, cursY, " ", termbox.ColorDefault, termbox.ColorRed)
+					cursX--
+					termbox.SetCursor(cursX+1, cursY)
+					drawLineFull(cursX+1, cursY, " ", termbox.ColorDefault, termbox.ColorRed)
+					drawLineFull(cursX+2, cursY, ope, termbox.ColorDefault, termbox.ColorRed)
+					text = text[:len(text)-1]
+					termbox.Flush()
+				}
 			default:
 				if cursX < maxX-1 {
+					drawLineFull(cursX+2, cursY, " ", termbox.ColorDefault, termbox.ColorRed)
 					cursX++
 					termbox.SetCursor(cursX+1, cursY)
 					drawLineFull(cursX, cursY, fmt.Sprintf("%c", ev.Ch), termbox.ColorDefault, termbox.ColorRed)
+					drawLineFull(cursX+2, cursY, ope, termbox.ColorDefault, termbox.ColorRed)
 					termbox.Flush()
 					text = append(text, fmt.Sprintf("%c", ev.Ch))
 				}
