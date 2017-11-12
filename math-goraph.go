@@ -5,6 +5,7 @@ import (
 	"fmt"
 	//	"github.com/aeden/traceroute"
 	"github.com/nsf/termbox-go"
+	"time"
 )
 
 func drawLine(x, y int, str string) {
@@ -42,6 +43,57 @@ func tbprint(x, y int, fg, bg termbox.Attribute, msg string) {
 	}
 }
 
+func initFill(maxX, cursY int) {
+	maxY := cursY - 2
+	midX := maxX / 2
+	midY := maxY / 2
+	Xpunc := midX / 5
+	Ypunc := midY / 5
+
+	fill(0, 0, maxX, maxY, termbox.Cell{Ch: ' '})
+	fill(0, midY, maxX, 1, termbox.Cell{Ch: '-'})
+	fill(midX, 0, 1, maxY, termbox.Cell{Ch: '|'})
+	drawLine(midX+1, midY+1, "O")
+
+	var YpunCounter int
+	for i := 1; i <= Ypunc; i++ {
+		YpunCounter += 5
+		drawLine(midX+1, midY-YpunCounter, fmt.Sprint(YpunCounter))
+		drawLine(midX+1, midY+YpunCounter, fmt.Sprintf("-%v", YpunCounter))
+	}
+	var XpunCounter int
+	for i := 1; i <= Xpunc; i++ {
+		XpunCounter += 5
+		drawLine(midX+XpunCounter, midY+1, fmt.Sprint(XpunCounter))
+		drawLine(midX-XpunCounter, midY+1, fmt.Sprintf("-%v", XpunCounter))
+	}
+
+	//drawLine(midX+1, midY-5, "5")
+	//drawLine(midX+1, midY+5, "-5")
+}
+
+func drawMathLoop(maxX, cursY int) {
+	maxY := cursY - 1
+	//midX := maxX / 2
+	//midY := maxY / 2
+	/*if midX < midY {
+		firstX := midY - midX
+	} else {
+		firstX := midX - midY
+	}*/
+
+	/*if y = x*/
+	var i int
+	for {
+		drawLineFull(0+i, maxY-i, "*", termbox.ColorGreen, termbox.Attribute(100+1))
+		termbox.Flush()
+		time.Sleep(1 * time.Second)
+		drawLineFull(0+i, maxY-i, " ", termbox.ColorGreen, termbox.Attribute(100+1))
+		termbox.Flush()
+		i++
+	}
+}
+
 func main() {
 
 	err := termbox.Init()
@@ -61,14 +113,20 @@ func main() {
 
 	cursX := 1
 	cursY := maxY - 2
-	termbox.SetCursor(cursX+1, 2)
+	termbox.SetCursor(cursX+1, cursY)
 
 	var cmdLine string
-	for i := 0; i < maxX; i++ {
+	coordinate := fmt.Sprintf("maxX: %v maxY: %v ", maxX, maxY)
+	for i := 0; i < maxX-len(coordinate); i++ {
 		cmdLine = cmdLine + " "
 	}
+	cmdLine = cmdLine + coordinate
 	drawLineFull(0, cursY, cmdLine, termbox.ColorDefault, termbox.ColorRed)
+	initFill(maxX, maxY)
+	drawLineFull(0, cursY-1, "bench", termbox.ColorGreen, termbox.Attribute(100+1))
 	termbox.Flush()
+
+	go drawMathLoop(maxX, cursY)
 
 	for {
 		switch ev := termbox.PollEvent(); ev.Type {
@@ -80,7 +138,7 @@ func main() {
 				if cursX > 1 {
 					cursX--
 					termbox.SetCursor(cursX+1, cursY)
-					drawLine(cursX+1, cursY, " ")
+					drawLineFull(cursX+1, cursY, " ", termbox.ColorDefault, termbox.ColorRed)
 
 					text = text[:len(text)-1]
 					termbox.Flush()
